@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>yamatora 3D Model Viewer</title>
+  <script src="./libs/babylon/babylon.js"></script>
+  <script src="./libs/babylon/babylonjs.loaders.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background-color: #333;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      z-index: 2;
+    }
+
+    #header h1 {
+      font-size: 20px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+
+    #video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    #renderCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: transparent;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>yamatora 3D Model Viewer</h1>
+  </div>
+
+  <!-- カメラ映像 -->
+  <video id="video" autoplay playsinline muted></video>
+
+  <!-- Babylon.js用 Canvas -->
+  <canvas id="renderCanvas" touch-action="none"></canvas>
+
+  <script>
+
+
+    // カメラ映像を取得
+//    navigator.mediaDevices.getUserMedia({ video: true })
+//      .then(stream => {
+//        const video = document.getElementById("video");
+//        video.srcObject = stream;
+//      })
+//      .catch(error => {
+//        console.error("カメラの取得に失敗しました:", error);
+//      });
+
+	navigator.mediaDevices.getUserMedia({
+	  video: { facingMode: { exact: "environment" } }
+	})
+	.then(stream => {
+	  const video = document.getElementById("video");
+	  video.srcObject = stream;
+	})
+	.catch(error => {
+	  console.error("カメラの取得に失敗しました:", error);
+	});
+
+    // URLパラメータからPLYファイル名を取得（例: ?model=myModel.ply）
+    const urlParams = new URLSearchParams(window.location.search);
+    const plyFileName = urlParams.get("model") || "italiachan.splat";
+
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true);
+
+    const createScene = () => {
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // 背景透明化
+
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        Math.PI / 4,
+        Math.PI / 3,
+        10,
+        BABYLON.Vector3.Zero(),
+        scene
+      );
+      camera.attachControl(canvas, true);
+      camera.wheelPrecision = 10;
+      camera.inertia = 0.5;
+      camera.lowerRadiusLimit = 2;
+      camera.upperRadiusLimit = 50;
+
+      const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
+
+      // PLYファイル読み込み
+      BABYLON.SceneLoader.Append("", `./${plyFileName}`, scene, function () {
+        const mesh = scene.meshes[0];
+        mesh.scaling = new BABYLON.Vector3(2, 2, 2);
+        console.log("PLY file loaded successfully!");
+      }, null, function (scene, message) {
+        console.error("Failed to load PLY file:", message);
+      });
+
+      return scene;
+    };
+
+    const scene = createScene();
+
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
+
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+  </script>
+</body>
+</html>
